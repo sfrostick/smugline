@@ -59,6 +59,7 @@ import json
 import requests
 import time
 from itertools import groupby
+import exifread
 
 __version__ = '0.6.0'
 
@@ -79,6 +80,7 @@ class SmugLine(object):
             app_name="SmugLine")
         self.login()
         self.md5_sums = {}
+	self.exif_smug = {}
 
     def get_filter(self, media_type='images'):
         if media_type == 'videos':
@@ -145,7 +147,9 @@ class SmugLine(object):
         self._download(images, dest_folder)
 
     def _upload(self, images, album_name, album):
-        images = self._remove_duplicates(images, album)
+        images = self._remove_duplicates_exif(images,album)
+        #self._remove_duplicates(images, album)
+	
         for image in images:
             print('uploading {0} -> {1}'.format(image, album_name))
             self.upload_file(album, image)
@@ -198,9 +202,48 @@ class SmugLine(object):
             print('I/O Error({0}): {1}...skipping'.format(errno, strerror))
             return False
 
+    def _include_file_exif(self,f,exif_smug):
+   	try:
+            fi = open(f,'rb')
+            tags = exifread.process_file(fi)
+            fi_name =  fi.name[2:]
+            fi_date_taken =  tags['EXIF DateTimeOriginal']
+
+            #presuming that if the current album doesn't have
+            #have a file with the same name then its ok to upload
+            if fi_name not in exif_smug:
+                return True
+            elif time.strptime(str(fi_date_taken),"%Y:%m:%d %H:%M:%S") == time.strptime(exif_smug[fi_name],"%Y-%m-%d %H:%M:%S"):
+                print('skipping {0} (duplicate)'.format(f))
+                return False
+            return True
+	except IOError as err:	
+            errno, strerror = err
+            print('I/O Error({0}): {1}...skipping'.format(errno, strerror))
+            return False
+	
+	finally:
+            fi.close()
+
     def _remove_duplicates(self, images, album):
         md5_sums = self._get_md5_hashes_for_album(album)
         return [x for x in images if self._include_file(x.get('File'), md5_sums)]
+
+    def _remove_duplicates_exif(self,images,album):
+	exif_smug = self._get_exif_data(album)
+	return [x for x in images if self._include_file_exif(x.get('File'),exif_smug)]
+
+    def _get_exif_data(self,album):
+	exif_smug = {} 
+        remote_images = self._get_remote_images(album,'FileName')
+        for img in remote_images['Album']['Images']:
+                exifdata = self.smugmug.images_getEXIF(ImageKey=img['Key'])['Image']
+                time_taken = exifdata['DateTimeOriginal']
+		file_name = img['FileName']
+		exif_smug[file_name] = time_taken
+		self.exif_smug[album['id']] = { file_name : time_taken } 
+	return exif_smug
+                
 
     def get_albums(self):
         albums = self.smugmug.albums_get(NickName=self.nickname)
@@ -276,18 +319,19 @@ class SmugLine(object):
         return self.user_info
 
     def _delete_image(self, image):
-        print('deleting image {0} (md5: {1})'.format(image['FileName'],
-                                                    image['MD5Sum']))
+        print('deleting image {0})'.format(image['FileName']))
         self.smugmug.images_delete(ImageID=image['id'])
 
     def clear_duplicates(self, album_name):
         album = self.get_album_by_name(album_name)
         remote_images = self._get_remote_images(album, 'MD5Sum,FileName')
-        md5_sums = []
+        exif_smug={}
         for image in remote_images['Album']['Images']:
-            if image['MD5Sum'] in md5_sums:
+            exifdata = self.smugmug.images_getEXIF(ImageKey=image['Key'])['Image']
+            if image['FileName'] in exif_smug:
+               if time.strptime(exif_smug[image['FileName']], "%Y-%m-%d %H:%M:%S") == time.strptime(exifdata['DateTimeOriginal'],"%Y-%m-%d %H:%M:%S"):
                 self._delete_image(image)
-            md5_sums.append(image['MD5Sum'])
+            exif_smug[image['FileName']] = exifdata['DateTimeOriginal']
 
 
 if __name__ == '__main__':
