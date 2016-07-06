@@ -80,7 +80,7 @@ class SmugLine(object):
             app_name="SmugLine")
         self.login()
         self.md5_sums = {}
-	self.exif_smug = {}
+  self.exif_smug = {}
 
     def get_filter(self, media_type='images'):
         if media_type == 'videos':
@@ -149,7 +149,7 @@ class SmugLine(object):
     def _upload(self, images, album_name, album):
         images = self._remove_duplicates_exif(images,album)
         #self._remove_duplicates(images, album)
-	
+
         for image in images:
             print('uploading {0} -> {1}'.format(image, album_name))
             self.upload_file(album, image)
@@ -203,7 +203,7 @@ class SmugLine(object):
             return False
 
     def _include_file_exif(self,f,exif_smug):
-   	try:
+    try:
             fi = open(f,'rb')
             tags = exifread.process_file(fi)
             fi_name =  fi.name[2:]
@@ -217,12 +217,12 @@ class SmugLine(object):
                 print('skipping {0} (duplicate)'.format(f))
                 return False
             return True
-	except IOError as err:	
+  except IOError as err:
             errno, strerror = err
             print('I/O Error({0}): {1}...skipping'.format(errno, strerror))
             return False
-	
-	finally:
+
+  finally:
             fi.close()
 
     def _remove_duplicates(self, images, album):
@@ -230,20 +230,19 @@ class SmugLine(object):
         return [x for x in images if self._include_file(x.get('File'), md5_sums)]
 
     def _remove_duplicates_exif(self,images,album):
-	exif_smug = self._get_exif_data(album)
-	return [x for x in images if self._include_file_exif(x.get('File'),exif_smug)]
+      exif_smug = self._get_exif_data(album)
+      return [x for x in images if self._include_file_exif(x.get('File'),exif_smug)]
 
     def _get_exif_data(self,album):
-	exif_smug = {} 
-        remote_images = self._get_remote_images(album,'FileName')
-        for img in remote_images['Album']['Images']:
-                exifdata = self.smugmug.images_getEXIF(ImageKey=img['Key'])['Image']
-                time_taken = exifdata['DateTimeOriginal']
-		file_name = img['FileName']
-		exif_smug[file_name] = time_taken
-		self.exif_smug[album['id']] = { file_name : time_taken } 
-	return exif_smug
-                
+      exif_smug = {}
+      remote_images = self._get_remote_images(album,'FileName')
+      for img in remote_images['Album']['Images']:
+              exifdata = self.smugmug.images_getEXIF(ImageKey=img['Key'])['Image']
+              time_taken = exifdata['DateTimeOriginal']
+      file_name = img['FileName']
+      exif_smug[file_name] = time_taken
+      self.exif_smug[album['id']] = { file_name : time_taken }
+      return exif_smug
 
     def get_albums(self):
         albums = self.smugmug.albums_get(NickName=self.nickname)
