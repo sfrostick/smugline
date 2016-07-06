@@ -80,7 +80,7 @@ class SmugLine(object):
             app_name="SmugLine")
         self.login()
         self.md5_sums = {}
-  self.exif_smug = {}
+        self.exif_smug = {}
 
     def get_filter(self, media_type='images'):
         if media_type == 'videos':
@@ -203,7 +203,7 @@ class SmugLine(object):
             return False
 
     def _include_file_exif(self,f,exif_smug):
-    try:
+        try:
             fi = open(f,'rb')
             tags = exifread.process_file(fi)
             fi_name =  fi.name[2:]
@@ -217,12 +217,12 @@ class SmugLine(object):
                 print('skipping {0} (duplicate)'.format(f))
                 return False
             return True
-  except IOError as err:
+        except IOError as err:
             errno, strerror = err
             print('I/O Error({0}): {1}...skipping'.format(errno, strerror))
             return False
 
-  finally:
+        finally:
             fi.close()
 
     def _remove_duplicates(self, images, album):
