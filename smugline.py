@@ -237,11 +237,11 @@ class SmugLine(object):
       exif_smug = {}
       remote_images = self._get_remote_images(album,'FileName')
       for img in remote_images['Album']['Images']:
-              exifdata = self.smugmug.images_getEXIF(ImageKey=img['Key'])['Image']
-              time_taken = exifdata['DateTimeOriginal']
-      file_name = img['FileName']
-      exif_smug[file_name] = time_taken
-      self.exif_smug[album['id']] = { file_name : time_taken }
+        exifdata = self.smugmug.images_getEXIF(ImageKey=img['Key'])['Image']
+        time_taken = exifdata['DateTimeOriginal']
+        file_name = img['FileName']
+        exif_smug[file_name] = time_taken
+        self.exif_smug[album['id']] = { file_name : time_taken }
       return exif_smug
 
     def get_albums(self):
